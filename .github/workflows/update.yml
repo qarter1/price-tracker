@@ -28,4 +28,3 @@ jobs:
           git commit -m "Daily price update"
           git push
         continue-on-error: true
-        

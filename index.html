@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Трекер цен сборки</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+    h1 {
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ccc;
+    }
+    th {
+      background: #e9e9e9;
+    }
+    .price-up {
+      color: red;
+    }
+    .price-down {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>💻 Трекер цен сборки</h1>
+  <p>🕓 Последнее обновление: <span id="last-update">—</span></p>
+  <table id="price-table">
+    <thead>
+      <tr>
+        <th>Товар</th>
+        <th>Цена со скидкой</th>
+        <th>Без скидки</th>
+        <th>Изменение</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <th>Итого</th>
+        <th id="total-discounted">—</th>
+        <th id="total-original">—</th>
+        <th id="total-diff">—</th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <script>
+    async function loadPrices() {
+      const res = await fetch('prices.json');
+      const data = await res.json();
+
+      const tbody = document.querySelector('#price-table tbody');
+      tbody.innerHTML = '';
+
+      let totalDiscount = 0;
+      let totalOriginal = 0;
+
+      const cachedPrices = JSON.parse(localStorage.getItem('cachedPrices') || '{}');
+
+      for (const p of data.products) {
+        const tr = document.createElement('tr');
+
+        const discount = p.discount_price || 0;
+        const original = p.original_price || 0;
+        totalDiscount += discount;
+        totalOriginal += original;
+
+        const prev = cachedPrices[p.name] || 0;
+        const diff = discount - prev;
+
+        let diffClass = '';
+        let diffText = '—';
+        if (diff > 0) {
+          diffClass = 'price-up';
+          diffText = '+' + diff.toLocaleString('ru-RU') + ' лей';
+        } else if (diff < 0) {
+          diffClass = 'price-down';
+          diffText = diff.toLocaleString('ru-RU') + ' лей';
+        }
+
+        tr.innerHTML = `
+          <td><a href="${p.url}" target="_blank">${p.name}</a></td>
+          <td>${discount ? discount.toLocaleString('ru-RU') + ' лей' : '—'}</td>
+          <td>${original ? original.toLocaleString('ru-RU') + ' лей' : '—'}</td>
+          <td class="${diffClass}">${diffText}</td>
+        `;
+
+        tbody.appendChild(tr);
+        cachedPrices[p.name] = discount;
+      }
+
+      localStorage.setItem('cachedPrices', JSON.stringify(cachedPrices));
+
+      document.getElementById('total-discounted').textContent = totalDiscount.toLocaleString('ru-RU') + ' лей';
+      document.getElementById('total-original').textContent = totalOriginal.toLocaleString('ru-RU') + ' лей';
+      document.getElementById('total-diff').textContent = (totalDiscount - totalOriginal).toLocaleString('ru-RU') + ' лей';
+      document.getElementById('last-update').textContent = new Date(data.date).toLocaleString('ru-RU');
+    }
+
+    loadPrices();
+  </script>
+</body>
+</html>
